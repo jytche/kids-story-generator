@@ -5,55 +5,73 @@ import os
 
 load_dotenv()
 
+st.set_page_config(page_title="Story Maker", layout="wide")
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-st.title("Disney-themed bedtime story generator")
-st.subheader("Create magical bedtime stories for your little ones!")
+st.title("Themed story maker")
+st.subheader("Create magical stories for your little ones!")
 
-character = st.text_input("Main Character","a kind princess named Charlotte")
-setting = st.text_input("Setting","a magical forest")
-lesson = st.text_input("Moral Lesson","kindness")
-custom_element = st.text_input("Custom Element", "a magical key")
+col1, col2, col3, col4 = st.columns([2,0.2,3,0.2])
 
-if "story" not in st.session_state:
-    st.session_state.story = ""
+with col1:
+    character = st.text_input("👸  This story will star the character(s):","Charlotte, a kind princess")
+    setting = st.text_input("🌳  And set in:","a magical forest")
+    lesson = st.text_input("📚  With a moral lesson about:","kindness")
+    custom_element = st.text_input("🔑  And include a special surprise of:", "a magical key")
+    theme = st.text_input("✨  Themes:", "Disney")
+    
+    if "story" not in st.session_state:
+        st.session_state.story = ""
+    
+    col1, col2 = st.columns([1,1])
 
-if st.button("Generate story!"):
-    with st.spinner("Generating your magical bedtime story..."):
-       messages = [
-            {
-                "role": "system",
-                "content": "You are a creative storyteller who writes heartwarming, Disney-style bedtime stories for children."
-            },
-            {
-                "role": "user",
-                "content": f"Write a bedtime story where the main character is {character}, set in {setting}. "
-                           f"The story should teach a moral lesson about {lesson} and include {custom_element}."
-            }
-        ]
+    with col1:
+        create_button = st.button("🪄 Create your story!")
+    with col2:
+        narrate_button = st.button("🎵 Narrate your story!")
 
-    try:
-            response = client.chat.completions.create(model="gpt-3.5-turbo",
-            messages=messages,
-            max_tokens=1000,
-            temperature=0.7)
+with col3:
 
-            st.session_state.story = response.choices[0].message.content
-            st.success("Heres your story!")
-            st.markdown(st.session_state.story)
-    except Exception as e:
-            st.error(f"An error occurred: {e}")
+    if create_button:
+        with st.spinner("Now creating your story..."):
+           messages = [
+                {
+                    "role": "system",
+                    "content": "You are a creative storyteller who writes heartwarming, Disney-style stories for children between the ages of 3 and 8. These stories can be narrated under 5 minutes."
+                },
+                {
+                    "role": "user",
+                    "content": f"Write a bedtime story where the characters are {character}, set in {setting} in the style of {theme}."
+                               f"The story should teach a moral lesson about {lesson} and include {custom_element}."
+                }
+            ]
 
-if st.session_state.story and st.button("Listen to Story"):
-    with st.spinner("Now narrating your story..."):
         try:
-                response = client.audio.speech.create(
-                   model="tts-1",
-                   voice="alloy",
-                   input=st.session_state.story)
-                response.stream_to_file("output.mp3")
-                st.audio("output.mp3", format="audio/mp3")
+                response = client.chat.completions.create(model="gpt-3.5-turbo",
+                messages=messages,
+                max_tokens=1000,
+                temperature=0.7)
+
+                st.session_state.story = response.choices[0].message.content
+                st.success("Heres your story!")  
         except Exception as e:
-             st.error(f"An error occurred: {e}")
-elif not st.session_state.story:
-    st.warning("Please generate a story first!")
+                st.error(f"An error occurred: {e}")
+
+    if st.session_state.story:
+        st.markdown(st.session_state.story)
+
+if narrate_button:
+    if st.session_state.story:
+        with st.spinner("Now narrating your story..."):
+            try:
+                    response = client.audio.speech.create(
+                       model="tts-1",
+                       voice="alloy",
+                       input=st.session_state.story)
+                    response.stream_to_file("output.mp3")
+                    st.audio("output.mp3", format="audio/mp3")
+            except Exception as e:
+                  st.error(f"An error occurred: ")
+    else:
+         st.warning("Please create a story first!")
